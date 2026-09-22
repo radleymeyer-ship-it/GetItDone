@@ -1,18 +1,54 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Theme } from '../constants/theme';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+function RootLayoutNav() {
+  const { user, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
 
-SplashScreen.preventAutoHideAsync();
+  useEffect(() => {
+    if (loading) return;
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+    const inCustomerGroup = segments[0] === '(customer)';
+
+    if (!user && inCustomerGroup) {
+      router.replace('/');
+    } else if (user && !inCustomerGroup) {
+      router.replace('/(customer)/jobs');
+    }
+  }, [user, loading]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Theme.colors.background }}>
+        <ActivityIndicator size="large" color={Theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: Theme.colors.background },
+      }}
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(customer)" />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
